@@ -1,0 +1,4 @@
+node_modules/*
+public/routeEndpoint*/*
+routeMapper/*
+.DS_Store
