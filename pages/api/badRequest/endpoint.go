@@ -7,7 +7,7 @@ type BR struct {
 }
 
 
-func Handle(w http.ResponseWriter, req *http.Request) BR {
+func Handle(w http.ResponseWriter, req *http.Request) (BR,bool) {
   w.WriteHeader(http.StatusInternalServerError)
-  return BR{Status:200}
+  return BR{Status:200},true
 }

@@ -7,7 +7,7 @@ type Something struct{
   Value int
 }
 
-func Handle(w http.ResponseWriter, req *http.Request) Something {
+func Handle(w http.ResponseWriter, req *http.Request) (Something,bool) {
 
-  return Something{Name: "hi", Value: 12}
+  return Something{Name: "hi", Value: 12},false
 }

@@ -37,12 +37,20 @@ func main() {
 		fmt.Println(req.URL.Path)
 		if val, ok := routeMapper.RequestMap[req.URL.Path]; ok {
 			if val.IsApi{
-				w.Write(val.HandleFunction(w,req))
+				v,earlyExit := val.HandleFunction(w,req)
+				if earlyExit {
+					return 
+				}
+				w.Write(v)
 				return ;
 			} else {
 				var props string = ""
 				if val.HandleFunction != nil {
-					props = string(val.HandleFunction(w,req))
+					initalProps, earlyExit := val.HandleFunction(w,req)
+					if earlyExit {
+						return 
+					}
+					props = string(initalProps)
 				}
 				ptS := newPath(val.PathToTemplate, props)
 				t.Execute(w,ptS)

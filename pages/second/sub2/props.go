@@ -5,8 +5,8 @@ type Props struct {
 	Name string
 }
 
-func GetProps(w http.ResponseWriter, req *http.Request) Props {
+func GetProps(w http.ResponseWriter, req *http.Request) (Props, bool) {
 
-	return Props{Num: 1, Name: "Greg"}
+	return Props{Num: 1, Name: "Greg"},false
 
 }

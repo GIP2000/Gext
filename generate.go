@@ -73,6 +73,9 @@ func walkFunction(path string, info os.FileInfo, err error) error {
 	return nil
 }
 
+func makeFunc(name string) string {
+	return "func(w http.ResponseWriter, req *http.Request) ([]byte,bool) {val, exitEarly := " + name + "(w,req); if exitEarly { return nil, true}; s,err := json.Marshal(val); if err != nil {panic(err)}; return s,false}"
+}
 
 func makeFile (){
 
@@ -102,7 +105,7 @@ func makeFile (){
 	for i, template := range templates {
 		mapStr += "\"" + removePages(template.Path) + "\": {PathToTemplate:\"" + "routeEndpoint" + strconv.Itoa(i) + "\", IsApi: false"
 		if template.PropsFunc {
-			mapStr += ",HandleFunction: func(w http.ResponseWriter, req *http.Request) []byte {s,err := json.Marshal(routeEndpoint" + strconv.Itoa(i) + ".GetProps(w,req)); if err != nil {panic (err)}; return s;}"
+			mapStr += ",HandleFunction: " + makeFunc("routeEndpoint" + strconv.Itoa(i) + ".GetProps")
 		}
 		mapStr += "}"
 		if i < len(templates)-1 || len(apiEndpoints) > 0 {
@@ -111,7 +114,7 @@ func makeFile (){
 	}
 
 	for path, i := range apiEndpoints {
-		mapStr += "\"" + removePages(path) + "\": {IsApi: true, HandleFunction: func (w http.ResponseWriter, req *http.Request) []byte {s,err := json.Marshal(apiEndpoint" + strconv.Itoa(i) + ".Handle(w,req)); if err != nil {panic(err)}; return s;}}"
+		mapStr += "\"" + removePages(path) + "\": {IsApi: true, HandleFunction:" + makeFunc("apiEndpoint" + strconv.Itoa(i) + ".Handle") + "}"
 		if i < len(apiEndpoints)-1 {
 			mapStr += ","
 		}
@@ -119,7 +122,7 @@ func makeFile (){
 
 	mapStr += "}"
 
-	_, err = f.WriteString(fmt.Sprintf("package routeMapper\n import(\n%s\n\"encoding/json\"\n\"net/http\"\n)\ntype Endpoint struct {\nPathToTemplate string\nHandleFunction func(http.ResponseWriter,*http.Request) []byte\nIsApi bool\n}\n var RequestMap map[string]Endpoint = %s", imports, mapStr))
+	_, err = f.WriteString(fmt.Sprintf("package routeMapper\n import(\n%s\n\"encoding/json\"\n\"net/http\"\n)\ntype Endpoint struct {\nPathToTemplate string\nHandleFunction func(http.ResponseWriter,*http.Request) ([]byte,bool)\nIsApi bool\n}\n var RequestMap map[string]Endpoint = %s", imports, mapStr))
 	if err != nil {
 		panic(err)
 	}
