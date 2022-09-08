@@ -1,11 +1,15 @@
 package third
 
+import (
+	"net/http"
+)
+
 type Props struct {
 	Num  int
 	Name string
 }
 
-func GetProps() Props {
+func GetProps(w http.ResponseWriter, req *http.Request) Props {
 
 	return Props{Num: 1, Name: "Greg"}
 

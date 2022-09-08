@@ -92,14 +92,17 @@ func makeFile (){
 		if !template.PropsFunc {
 			continue
 		}
+		if strings.HasPrefix(template.Path,"./") {
+			template.Path = template.Path[2:]
+		}
 		imports += "routeEndpoint" + strconv.Itoa(i) + " \"" + parent + "/" + template.Path + "\"\n"
 	}
 	mapStr := "map[string]Endpoint{"
 
 	for i, template := range templates {
-		mapStr += "\"" + removePages(template.Path) + "\": {PathToTemplate:\"" + "./pubic/routeEndpoint" + strconv.Itoa(i) + "/bundle.js" + "\", IsApi: false"
+		mapStr += "\"" + removePages(template.Path) + "\": {PathToTemplate:\"" + "routeEndpoint" + strconv.Itoa(i) + "\", IsApi: false"
 		if template.PropsFunc {
-			mapStr += ",HandleFunction: func() []byte {s,err := json.Marshal(routeEndpoint" + strconv.Itoa(i) + ".GetProps()); if err != nil {panic (err)}; return s;}"
+			mapStr += ",HandleFunction: func(w http.ResponseWriter, req *http.Request) []byte {s,err := json.Marshal(routeEndpoint" + strconv.Itoa(i) + ".GetProps(w,req)); if err != nil {panic (err)}; return s;}"
 		}
 		mapStr += "}"
 		if i < len(templates)-1 || len(apiEndpoints) > 0 {
@@ -108,7 +111,7 @@ func makeFile (){
 	}
 
 	for path, i := range apiEndpoints {
-		mapStr += "\"" + removePages(path) + "\": {IsApi: true, HandleFunction: func () []byte {s,err := json.Marshal(apiEndpoint" + strconv.Itoa(i) + ".Handle()); if err != nil {panic(err)}; return s;}}"
+		mapStr += "\"" + removePages(path) + "\": {IsApi: true, HandleFunction: func (w http.ResponseWriter, req *http.Request) []byte {s,err := json.Marshal(apiEndpoint" + strconv.Itoa(i) + ".Handle(w,req)); if err != nil {panic(err)}; return s;}}"
 		if i < len(apiEndpoints)-1 {
 			mapStr += ","
 		}
@@ -116,7 +119,7 @@ func makeFile (){
 
 	mapStr += "}"
 
-	_, err = f.WriteString(fmt.Sprintf("package routeMapper\n import(\n%s\n\"encoding/json\"\n)\ntype Endpoint struct {\nPathToTemplate string\nHandleFunction func() []byte\nIsApi bool\n}\n var RequestMap map[string]Endpoint = %s", imports, mapStr))
+	_, err = f.WriteString(fmt.Sprintf("package routeMapper\n import(\n%s\n\"encoding/json\"\n\"net/http\"\n)\ntype Endpoint struct {\nPathToTemplate string\nHandleFunction func(http.ResponseWriter,*http.Request) []byte\nIsApi bool\n}\n var RequestMap map[string]Endpoint = %s", imports, mapStr))
 	if err != nil {
 		panic(err)
 	}
@@ -145,7 +148,11 @@ func bundler(path string, index int) {
 		panic(err)
 	}
 
-	f.WriteString("//This was Generated\nimport App from \"." + path + "\"")
+	if !strings.HasPrefix(path,"./") {
+		path = "./" + path
+	}
+
+	f.WriteString("//This was Generated\nimport App from \"." + path + "\";\nexport default App;\n")
 	f.Close()
 
 	cmd := exec.Command("npm","run","build")
