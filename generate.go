@@ -1,4 +1,4 @@
-//go:build exclude
+//go:build ignore
 
 package main
 
@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"regexp"
 )
 
 type TemplateEndpoint struct {
@@ -127,6 +128,79 @@ func makeFile (){
 		panic(err)
 	}
 }
+
+func makeTSFiles () {
+	parent := "Gext"
+	for path, _ := range apiEndpoints {
+		makeTSFile(parent,path,path + "/endpoint.go",true)
+	}
+
+	for _,template :=range templates {
+		path := template.Path
+		fmt.Println("trying " + path)
+		if strings.HasPrefix(path,".") || strings.HasPrefix(path,"/") {
+			path = path[1:]
+		}
+		if strings.HasPrefix(path,"/") {
+			path = path[1:]
+		}
+		makeTSFile(parent,path, path + "/props.go",false)
+	}
+}
+
+func makeTSFile (parent string, packagePath string, scriptPath string, addFetch bool) {
+	fileName := "types.ts"
+	if addFetch {
+		fileName = "request.ts"
+	}
+	cmd := exec.Command("./tscriptify","-interface", "-package=" + parent + "/" + packagePath, "-target="  + packagePath + "/" + fileName, scriptPath) 
+	dir, err := os.Getwd()
+
+	if err != nil {
+		panic (err)
+	}
+	cmd.Dir = dir
+
+	out,err := cmd.Output()
+	fmt.Println(string(out))
+	if err != nil {
+		panic(err)
+	}
+	
+	if !addFetch {
+		return 
+	}
+
+	fileWrite,err := os.OpenFile(dir + "/" + packagePath + "/" + fileName, os.O_APPEND | os.O_WRONLY, 411)
+
+	if err != nil {
+		panic (err)
+	}
+
+	defer fileWrite.Close()
+
+	scriptBytes,err := os.ReadFile(dir + "/" + scriptPath)
+	if err != nil {
+		panic(err)
+	}
+
+	re := regexp.MustCompile(` *func *Handle *\(.*\) *\((.*) *, *bool *\)`)
+	matches := re.FindSubmatch(scriptBytes)
+	if len(matches) < 1 {
+		fmt.Println("Couldn't find handle function")
+		return ;
+	}
+	DataType := string(matches[1])
+	fmt.Println(DataType)
+
+	if _, err = fileWrite.WriteString("\nexport const getData = async ():Promise<" + DataType + "> =>(await fetch(\"" + removePages(packagePath) + "\")).json() as Promise<" + DataType + ">"); err != nil {
+		panic(err)
+	}
+
+
+}
+
+
 func bundleAll() {
 	names, err := ioutil.ReadDir("./public")
 	if err != nil {
@@ -190,8 +264,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	makeTSFiles()
 	bundleAll()
-	// TODO: Build Svelte Applications and save the bundle paths
 	makeFile()
 
 
