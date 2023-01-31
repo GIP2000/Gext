@@ -25,10 +25,10 @@ func newPath (pth string, props string) path {
 func main() {
 
 	t, err := template.ParseFiles("./public/index.html")
-	
+
 	if err != nil {
 		log.Fatal("Please make sure you have a index.html file ")
-		panic(err)	
+		panic(err)
 	}
 
 	http.Handle("/static/",http.StripPrefix("/static/", http.FileServer(http.Dir("./public"))))
@@ -39,7 +39,7 @@ func main() {
 			if val.IsApi{
 				v,earlyExit := val.HandleFunction(w,req)
 				if earlyExit {
-					return 
+					return
 				}
 				w.Write(v)
 				return ;
@@ -48,7 +48,7 @@ func main() {
 				if val.HandleFunction != nil {
 					initalProps, earlyExit := val.HandleFunction(w,req)
 					if earlyExit {
-						return 
+						return
 					}
 					props = string(initalProps)
 				}
